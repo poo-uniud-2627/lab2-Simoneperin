@@ -1,3 +1,4 @@
+
 // Pong — Programmazione Orientata agli Oggetti e Laboratori, Udine, a.a. 2026-27
 package pong;
 
@@ -14,13 +15,14 @@ import java.awt.event.KeyEvent;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
-import ostacoli.MotoreDeiLivelli;
 import ostacoli.Ostacolo;
+import stelle.Raccolta;
+import stelle.Stella;
 
 /**
  * Mostra la partita: sessanta volte al secondo la fa avanzare di un passo e la ridisegna.
- * Prima di cominciare legge i tasti da 1 a 5 (il livello) e SPAZIO (via!).
- * Non prende nessuna decisione di gioco (quelle sono della Partita e del motore dei livelli).
+ * Legge solo il tasto SPAZIO (via!). Non prende nessuna decisione di gioco
+ * (quelle sono della Partita, di Livelli e del motore dei livelli).
  */
 class Schermo extends JPanel {
     private final Partita partita;
@@ -51,12 +53,6 @@ class Schermo extends JPanel {
 
     private void passo() {
         if (!partita.isInCorso()) {
-            for (int numero = 1; numero <= MotoreDeiLivelli.NUMERO_LIVELLI; numero++) {
-                // il tasto del numero, sopra le lettere o nel tastierino numerico
-                if (tastiera.premuto(KeyEvent.VK_0 + numero) || tastiera.premuto(KeyEvent.VK_NUMPAD0 + numero)) {
-                    partita.preparaLivello(numero);
-                }
-            }
             if (tastiera.premuto(KeyEvent.VK_SPACE)) partita.avvia();
         }
         partita.aggiorna();
@@ -93,6 +89,12 @@ class Schermo extends JPanel {
             }
         }
 
+        Stella stella = partita.getStella();
+        if (stella != null && stella.isVisibile()) {
+            g2.setColor(Color.YELLOW);
+            riempi(g2, stella.getArea());
+        }
+
         g2.setColor(Color.WHITE);
         disegna(g2, partita.getRacchettaSinistra());
         disegna(g2, partita.getRacchettaDestra());
@@ -105,17 +107,35 @@ class Schermo extends JPanel {
         g2.drawString(String.valueOf(partita.getPunti(Lato.SINISTRA)), larghezza / 2 - 80, 60);
         g2.drawString(String.valueOf(partita.getPunti(Lato.DESTRA)), larghezza / 2 + 50, 60);
 
+        // Il livello che si sta giocando (o che si è appena giocato), le vite e le stelle.
         g2.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 18));
         scriviAlCentro(g2, "Livello " + partita.getLivello().numero(), larghezza, altezza - 20);
+        g2.drawString("Vite: " + partita.getLivelli().getVite(), 20, 28);
+        g2.drawString("Stelle: " + partita.getRaccolta().getStelle() + "/" + Raccolta.STELLE_PER_UNA_VITA, 20, 52);
 
         if (!partita.isInCorso()) {
             g2.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 22));
-            if (partita.getVincitore() == Lato.SINISTRA) {
-                scriviAlCentro(g2, "Hai vinto!", larghezza, altezza / 2 - 40);
-            } else if (partita.getVincitore() == Lato.DESTRA) {
-                scriviAlCentro(g2, "Ha vinto il computer.", larghezza, altezza / 2 - 40);
+            Livelli livelli = partita.getLivelli();
+            if (partita.isIniziata()) {
+                if (livelli.isCompletato()) {
+                    scriviAlCentro(g2, "Hai completato tutti i livelli!", larghezza, altezza / 2 - 40);
+                } else if (livelli.isPerso()) {
+                    scriviAlCentro(g2, "Hai perso tutte le vite.", larghezza, altezza / 2 - 40);
+                } else if (partita.getVincitore() == Lato.SINISTRA) {
+                    scriviAlCentro(g2, "Livello vinto!", larghezza, altezza / 2 - 40);
+                } else if (partita.getVincitore() == Lato.DESTRA) {
+                    scriviAlCentro(g2, "Hai perso una vita.", larghezza, altezza / 2 - 40);
+                }
             }
-            scriviAlCentro(g2, "Premi un tasto da 1 a 5 per scegliere il livello, poi SPAZIO", larghezza, altezza / 2 + 60);
+            String invito;
+            if (!partita.isIniziata()) {
+                invito = "Premi SPAZIO per cominciare";
+            } else if (livelli.isFinito()) {
+                invito = "Premi SPAZIO per ricominciare";
+            } else {
+                invito = "Premi SPAZIO per continuare";
+            }
+            scriviAlCentro(g2, invito, larghezza, altezza / 2 + 60);
         }
     }
 
